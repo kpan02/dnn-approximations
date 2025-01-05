@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "a4_tests",
+      "setup": "sudo -H pip3 install pytest torch numpy",
+      "run": "python -m pytest tests/*",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 30
+    }
+  ]
+}
