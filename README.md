@@ -4,8 +4,8 @@
 
 `"Technology is a useful servant but a dangerous master." -- Christian Lous Lange, Historian`
 
-Assigned on: Monday April 15th    
-**Due: Monday May 6th**
+Assigned on: Wednesday April 9th    
+**Due: Monday May 5th**
 
 Total marks = 16/100    
 (-2 marks per day late)
