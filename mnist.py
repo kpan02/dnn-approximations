@@ -8,6 +8,27 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
 
+class SVDLinear(nn.Module):
+    def __init__(self, weight, bias, rank):
+        super().__init__()
+        # Compute SVD on CPU for stability
+        U, S, Vh = torch.linalg.svd(weight.cpu(), full_matrices=False)
+        U = U[:, :rank]
+        S = S[:rank]
+        Vh = Vh[:rank, :]
+        # Store as parameters/buffers
+        self.U = nn.Parameter(U.to(weight.device), requires_grad=False)
+        self.S = nn.Parameter(S.to(weight.device), requires_grad=False)
+        self.Vh = nn.Parameter(Vh.to(weight.device), requires_grad=False)
+        self.bias = nn.Parameter(bias, requires_grad=False)
+
+    def forward(self, x):
+        x = x @ self.Vh.t()
+        x = x * self.S
+        x = x @ self.U.t()
+        return x + self.bias
+
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -52,15 +73,22 @@ def test(model, device, test_loader):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            test_loss += F.nll_loss(output, target, reduction='sum').item()
+            pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
-
     test_loss /= len(test_loader.dataset)
-
+    accuracy = 100. * correct / len(test_loader.dataset)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+        test_loss, correct, len(test_loader.dataset), accuracy))
+    return accuracy
+
+
+def replace_with_svd_layers(model, rank):
+    # Replace each linear layer with SVDLinear using the current weights
+    model.fc1 = SVDLinear(model.fc1.weight.data, model.fc1.bias.data, rank)
+    model.fc2 = SVDLinear(model.fc2.weight.data, model.fc2.bias.data, rank)
+    model.fc3 = SVDLinear(model.fc3.weight.data, model.fc3.bias.data, min(rank, model.fc3.weight.shape[0]))
+    return model
 
 
 def main():
@@ -124,6 +152,22 @@ def main():
 
     if args.save_model:
         torch.save(model.state_dict(), "mnist_fc.pt")
+
+    # Load pretrained weights
+    model.load_state_dict(torch.load("data/mnist_fc.pt", map_location=device))
+
+    results = []
+    ranks = [4, 8, 16, 32, 64, 128, 256, 512]  # Adjust as needed
+    for rank in ranks:
+        model_svd = Net().to(device)
+        model_svd.load_state_dict(model.state_dict())
+        model_svd = replace_with_svd_layers(model_svd, rank)
+        import time
+        start = time.time()
+        accuracy = test(model_svd, device, test_loader)
+        elapsed = time.time() - start
+        print(f"Rank: {rank}, Time: {elapsed:.4f}s, Accuracy: {accuracy:.2f}%")
+        results.append((rank, elapsed, accuracy))
 
 
 if __name__ == '__main__':
