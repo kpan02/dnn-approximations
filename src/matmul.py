@@ -84,3 +84,33 @@ def logmatmul(A, B, **kwargs):
     
     result = torch.sum(prod_signs * torch.exp(sum_logs), dim=1)
     return result
+
+# Extra Credit
+def approx_logadd(logx, logy, C=0.6931):
+    diff = torch.abs(logx - logy)
+    return torch.max(logx, logy) + torch.relu(C - diff)
+
+def logmatmul_approx(A, B, **kwargs):
+    eps = 1e-12
+    sign_A = torch.sign(A)
+    sign_B = torch.sign(B)
+    log_A = torch.log(A.abs().clamp(min=eps))
+    log_B = torch.log(B.abs().clamp(min=eps))
+    N, M = A.shape
+    M2, K = B.shape
+    assert M == M2
+
+    result = torch.zeros((N, K), dtype=A.dtype, device=A.device)
+    for i in range(N):
+        for j in range(K):
+            s = sign_A[i, 0] * sign_B[0, j]
+            log_sum = log_A[i, 0] + log_B[0, j]
+            for k in range(1, M):
+                s_new = sign_A[i, k] * sign_B[k, j]
+                log_term = log_A[i, k] + log_B[k, j]
+                if s == s_new:
+                    log_sum = approx_logadd(log_sum, log_term)
+                else:
+                    log_sum = torch.max(log_sum, log_term) 
+            result[i, j] = s * torch.exp(log_sum)
+    return result
