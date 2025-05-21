@@ -1,3 +1,7 @@
+**Overview**: This project investigates different algorithmic approximations and numerical transformations for implementing deep learning primitives, as part of the [**ECE 5545**](https://abdelfattah-class.github.io/ece5545/): _Machine Learning Hardware and Systems_ course at Cornell Tech. The assignment covers methods like im2col, Winograd, FFT-based convolution, and matrix multiplications using SVD and log-space approximations. Each implementation is analyzed for correctness, reconstruction error, and performance under reduced numerical precision. We also apply SVD-based compression to a neural network for digit recognition and evaluate the tradeoffs between compression ratio, accuracy, and runtime.
+
+---
+
 ### ECE 5545 Machine Learning Hardware and Systems
 
 # Assignment 4: Implementations and Approximations of DNN Primitives
@@ -12,7 +16,7 @@ Total marks = 16/100
 
 ![](data/cudnn.png)
 
-----
+
 
 ## Overview
 
